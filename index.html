@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Solar System in Motion</title>
+<meta name="description" content="A real-time Keplerian solar system simulator on JPL orbital elements. Any date from 1 AD to 3000 AD, real asteroid orbits, a live star map, and exports.">
+<meta property="og:title" content="Solar System in Motion">
+<meta property="og:description" content="Watch the real solar system move — accurate positions for any date, real asteroid encounters, and the sky as it actually looked.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#050506">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./index-hSt5yHll.js"></script>
+  <link rel="modulepreload" crossorigin href="./three-C6AoC6lm.js">
+  <link rel="stylesheet" crossorigin href="./index-B5yFBSTX.css">
+</head>
+<body>
+
+<canvas id="scene-canvas" aria-label="Three-dimensional view of the solar system"></canvas>
+<div id="labels-root" aria-hidden="true"></div>
+<div id="fatal" role="alert"></div>
+
+<!-- ══════════════════════════ start ══════════════════════════ -->
+<div id="start-overlay">
+  <svg id="orrery-bg" viewBox="0 0 1000 1000" aria-hidden="true">
+    <g transform="rotate(-9 500 500)">
+      <path id="ring0" d="M 630,500 A 130,108 0 1,1 370,500 A 130,108 0 1,1 630,500 Z" fill="none" stroke="white" stroke-opacity="0.16"/>
+      <circle r="2.6" fill="white" fill-opacity="0.85"><animateMotion dur="7s" repeatCount="indefinite"><mpath href="#ring0"/></animateMotion></circle>
+    </g>
+    <g transform="rotate(5 500 500)">
+      <path id="ring1" d="M 705,500 A 205,172 0 1,1 295,500 A 205,172 0 1,1 705,500 Z" fill="none" stroke="white" stroke-opacity="0.12"/>
+      <circle r="2.4" fill="white" fill-opacity="0.7"><animateMotion dur="12s" repeatCount="indefinite"><mpath href="#ring1"/></animateMotion></circle>
+    </g>
+    <g transform="rotate(-4 500 500)">
+      <path id="ring2" d="M 788,500 A 288,240 0 1,1 212,500 A 288,240 0 1,1 788,500 Z" fill="none" stroke="white" stroke-opacity="0.09"/>
+      <circle r="2.2" fill="white" fill-opacity="0.6"><animateMotion dur="18s" repeatCount="indefinite"><mpath href="#ring2"/></animateMotion></circle>
+    </g>
+    <g transform="rotate(7 500 500)">
+      <path id="ring3" d="M 878,500 A 378,312 0 1,1 122,500 A 378,312 0 1,1 878,500 Z" fill="none" stroke="white" stroke-opacity="0.07"/>
+      <circle r="2" fill="white" fill-opacity="0.5"><animateMotion dur="26s" repeatCount="indefinite"><mpath href="#ring3"/></animateMotion></circle>
+    </g>
+    <circle class="orrery-sun" cx="500" cy="500" r="5" fill="white"/>
+  </svg>
+
+  <div id="start-panel">
+    <div class="eyebrow">Orbital simulator</div>
+    <h1>Solar System<em>in Motion</em></h1>
+    <p class="start-lede">Real Keplerian mechanics on JPL orbital elements. Choose a span of time and watch the system run.</p>
+
+    <!-- PRIMARY: choose a range -->
+    <div class="start-primary">
+      <div class="field-row">
+        <label class="field"><span>Start</span><input type="date" id="date-start" value="2025-01-01" min="0001-01-01" max="2999-12-31"></label>
+        <label class="field"><span>End</span><input type="date" id="date-end" value="2027-01-01" min="0001-01-02" max="3000-01-01"></label>
+      </div>
+      <div class="presets">
+        <button class="chip" data-start="2025-01-01" data-end="2026-01-01">1 year</button>
+        <button class="chip" data-start="2025-01-01" data-end="2035-01-01">10 years</button>
+        <button class="chip" data-start="1526-01-01" data-end="2026-01-01">500 years</button>
+        <button class="chip" data-start="0001-01-01" data-end="2027-01-01">2000 years</button>
+      </div>
+      <div id="start-error" role="alert"></div>
+      <button class="btn-primary" id="btn-launch">Launch simulation</button>
+    </div>
+
+    <!-- SECONDARY: curated moments -->
+    <div class="start-secondary">
+      <div class="start-or"><span>or jump straight to a moment</span></div>
+      <div class="start-stories" id="start-stories"></div>
+    </div>
+
+    <button class="start-guide" id="btn-guide">How it works</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════ chrome ══════════════════════════ -->
+<header id="topbar">
+  <div class="tb-left">
+    <button id="btn-home" title="Back to the start screen">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="tb-brand">Solar System <span>in Motion</span></div>
+  </div>
+
+  <nav id="modes" role="tablist" aria-label="View mode">
+    <button class="mode" data-mode="orrery" role="tab" aria-selected="true">Orrery</button>
+    <button class="mode" data-mode="sky" role="tab" aria-selected="false">Sky</button>
+    <button class="mode" data-mode="atlas" role="tab" aria-selected="false">Atlas</button>
+  </nav>
+
+  <div class="tb-right">
+    <button class="tb-btn" id="btn-stories" title="Stories"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 015.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H5.5A1.5 1.5 0 014 19.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 7.5h8M8 11h8M8 14.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="lbl">Stories</span></button>
+    <button class="tb-btn" id="btn-search" title="Search (⌘K)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="lbl">Search</span><span class="kbd">⌘K</span></button>
+    <button class="tb-btn icon" id="btn-layers" title="Layers" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 13l9 5 9-5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="tb-btn icon" id="btn-export" title="Export" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 15V3m0 0L8 7m4-4l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </button>
+    <button class="tb-btn icon" id="btn-chrome" title="Hide the interface (C)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- readout: the one always-on data surface -->
+<div id="readout">
+  <div class="ro-date" id="ro-date">—</div>
+  <div class="ro-meta">
+    <span id="ro-calendar"></span>
+    <span class="ro-acc" id="ro-accuracy">—</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════ inspector ══════════════════════════ -->
+<aside id="inspector" aria-label="Inspector">
+  <div class="insp-head">
+    <div>
+      <div class="insp-eyebrow" id="insp-eyebrow">The system</div>
+      <h2 class="insp-title" id="insp-title">10 bodies in view</h2>
+    </div>
+    <button class="insp-close" id="insp-close" title="Collapse (I)">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="insp-body" id="insp-body"></div>
+</aside>
+<button id="insp-open" title="Show inspector (I)" aria-label="Show inspector">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
+<!-- ══════════════════════════ transport ══════════════════════════ -->
+<footer id="transport">
+  <button class="tr-play" id="btn-play" aria-label="Play or pause (space)">
+    <svg class="ic-pause" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><rect x="2" y="1.5" width="3.4" height="11" rx="1"/><rect x="8.6" y="1.5" width="3.4" height="11" rx="1"/></svg>
+    <svg class="ic-play" width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M3 1.6l9 5.4-9 5.4z"/></svg>
+  </button>
+  <button class="tr-btn" id="btn-reverse" title="Run time backwards">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><path d="M12.5 1.6v10.8L7 7zM6.5 1.6v10.8L1 7z"/></svg>
+  </button>
+
+  <div class="tr-track">
+    <input type="range" id="timeline" min="0" max="10000" value="0" step="1" aria-label="Scrub through the date range">
+    <div class="tr-ticks" id="tr-ticks" aria-hidden="true"></div>
+  </div>
+
+  <div class="tr-speed">
+    <input type="range" id="speed-slider" min="-1" max="3.56" step="0.02" value="1.5" aria-label="Speed">
+    <output id="speed-value">30 d/s</output>
+  </div>
+
+  <div class="tr-sep"></div>
+  <button class="tr-btn wide" id="btn-today">Today</button>
+  <button class="tr-btn wide" id="btn-reset">Reset</button>
+  <button class="tr-btn wide" id="btn-view">Top</button>
+</footer>
+
+<!-- ══════════════════════════ popovers ══════════════════════════ -->
+<div id="layers-panel" class="popover" role="dialog" aria-label="Layers">
+  <div class="pop-group">
+    <div class="pop-label">Bodies</div>
+    <label class="switch"><input type="checkbox" id="chk-moons"> <span>Moons</span><em>illustrative orbits</em></label>
+    <label class="switch"><input type="checkbox" id="chk-minor"> <span>Dwarf planets</span></label>
+    <label class="switch"><input type="checkbox" id="chk-comet"> <span>Halley's Comet</span></label>
+    <label class="switch"><input type="checkbox" id="chk-smallbodies"> <span>Real asteroids</span><em>JPL elements</em></label>
+    <label class="switch"><input type="checkbox" id="chk-neows"> <span>Near-Earth this week</span><em>NASA live</em></label>
+    <label class="switch"><input type="checkbox" id="chk-missions"> <span>Mission paths</span><em>illustrative</em></label>
+  </div>
+  <div class="pop-group">
+    <div class="pop-label">Overlays</div>
+    <label class="switch"><input type="checkbox" id="chk-trails" checked> <span>Orbit trails</span></label>
+    <label class="switch"><input type="checkbox" id="chk-belt" checked> <span>Asteroid belt</span></label>
+    <label class="switch"><input type="checkbox" id="chk-stars" checked> <span>Starfield</span></label>
+    <label class="switch"><input type="checkbox" id="chk-labels" checked> <span>Labels</span></label>
+  </div>
+  <div class="pop-group">
+    <div class="pop-label">Display</div>
+    <label class="switch"><input type="checkbox" id="chk-truescale"> <span>True-to-scale sizes</span></label>
+    <label class="switch"><input type="checkbox" id="chk-lowdetail"> <span>Low detail</span><em>for slower machines</em></label>
+  </div>
+</div>
+
+<div id="export-panel" class="popover" role="dialog" aria-label="Export">
+  <div class="pop-group" id="export-items"></div>
+  <div class="exp-status" id="exp-status" aria-live="polite"></div>
+</div>
+
+<!-- command palette -->
+<div id="palette" role="dialog" aria-modal="true" aria-label="Search and commands">
+  <div class="pal-box">
+    <input type="text" id="pal-input" placeholder="Search bodies, jump to a date, run a command…" autocomplete="off" spellcheck="false" aria-label="Search">
+    <div id="pal-results" role="listbox"></div>
+    <div class="pal-foot"><span><span class="kbd">↑↓</span> navigate</span><span><span class="kbd">↵</span> select</span><span><span class="kbd">esc</span> close</span></div>
+  </div>
+</div>
+
+<!-- stories -->
+<div id="stories" role="dialog" aria-label="Stories">
+  <div class="st-head">
+    <div>
+      <div class="insp-eyebrow">Guided</div>
+      <h2 class="insp-title">Stories</h2>
+    </div>
+    <button class="insp-close" id="st-close" aria-label="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="st-list" id="st-list"></div>
+</div>
+
+<!-- narration caption for story playback -->
+<div id="narration"><div class="nar-text" id="nar-text"></div><button id="nar-stop">End story</button></div>
+
+<!-- first-run tour -->
+<div id="tour" role="dialog" aria-label="Getting started"></div>
+
+<!-- atlas (optional editorial mode) -->
+<div id="atlas" aria-label="Atlas"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="scrim"></div>
+
+<!-- guide -->
+<div id="guide-overlay">
+  <div id="guide-modal" role="dialog" aria-modal="true" aria-label="How it works">
+    <button id="guide-close" aria-label="Close">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <div class="guide-eyebrow">User guide</div>
+    <h2 class="guide-title">How it works</h2>
+
+    <div class="guide-item">
+      <div class="guide-k">Time</div>
+      <div class="guide-v">The bar along the bottom owns time: play, run backwards, scrub to any date, and set speed in real units — hours per second up to about ten years per second. <span class="kbd">space</span> plays, <span class="kbd">←</span> <span class="kbd">→</span> step a day, hold <span class="kbd">shift</span> for a month.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-k">Accuracy</div>
+      <div class="guide-v">Positions come from JPL's Keplerian elements with secular rates: good to arcminutes between 1800 and 2050, and to about a degree from 1 AD to 3000 AD. The readout top-left always says which regime you are in, rather than claiming more than the model can deliver.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-k">Modes</div>
+      <div class="guide-v"><b>Orrery</b> is the view from above the system. <b>Sky</b> turns the simulation inside out and shows the sky as it actually looks from Earth on that date, with constellations. <b>Atlas</b> is a guided read through the system, chapter by chapter.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-k">Real asteroids</div>
+      <div class="guide-v">The asteroid layer uses genuine orbital elements from JPL's Small-Body Database — including the two interstellar visitors, whose orbits are open curves rather than ellipses. Each one shows how old its published elements are, because that is what limits the accuracy.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-k">Search</div>
+      <div class="guide-v">Press <span class="kbd">⌘K</span> (or <span class="kbd">ctrl K</span>) for everything: any body by name, a date to jump to, a layer to toggle, a story to play, an export to run.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-k">Export</div>
+      <div class="guide-v">Save a framed poster of the current moment, record a clip of a date range, download the computed positions as CSV or JSON, or copy an embed snippet that restores this exact view.</div>
+    </div>
+
+    <div class="guide-credits">
+      Planet maps <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener">Solar System Scope</a> (CC BY 4.0) · star catalogue HYG / Yale BSC via <a href="https://github.com/ofrohn/d3-celestial" target="_blank" rel="noopener">d3-celestial</a> · orbits from JPL SSD/Horizons · live imagery from NASA APOD, EPIC and NeoWs
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
